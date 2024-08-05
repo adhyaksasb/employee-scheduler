@@ -59,11 +59,6 @@
 				return false;
 			}
 
-			const employees = Array.from({ length: employee }, (_, i) => ({
-				value: i + 1,
-				label: i + 1
-			}));
-
 			if (selectedShift.value == 2) {
 				shifts = ['P', 'M'];
 			} else {
@@ -105,6 +100,7 @@
 			// 	localStorage.setItem('employees', JSON.stringify(employeeNames));
 			// 	localStorage.setItem('shiftName', JSON.stringify(shifts));
 			// }
+			console.log(employeeNames);
 			nextStep();
 		}
 	};

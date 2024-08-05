@@ -149,6 +149,7 @@
 	<table class="w-full border-collapse rounded-sm" id="employeeSchedule">
 		<thead class="bg-foreground text-background">
 			<tr>
+				<th class="border border-foreground px-2 py-3">No</th>
 				<th class="border border-foreground px-2 py-3">Nama Karyawan</th>
 				{#each Array.from({ length: days }, (_, i) => i + 1) as day}
 					<th class="border border-foreground px-2 py-3 text-center">{day}</th>
@@ -156,8 +157,9 @@
 			</tr>
 		</thead>
 		<tbody>
-			{#each Object.keys(schedule) as employee}
+			{#each Object.keys(schedule) as employee, i}
 				<tr>
+					<td class="border border-foreground px-2 py-3">{i + 1}</td>
 					<td class="border border-foreground px-2 py-3">{employee}</td>
 					{#each schedule[employee] as shift, day}
 						<td
