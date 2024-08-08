@@ -20,6 +20,10 @@
 		[employee: string]: string[];
 	};
 
+	let workDays: number = days - 2;
+
+	let holidaysPerEmployee: { [employee: string]: number[] } = {};
+
 	let schedule: Schedule = $state({});
 
 	let showTable: boolean = $state(false);
@@ -27,6 +31,8 @@
 	let editableShift: { employee: string; day: number } | null = $state(null);
 
 	let editTable: boolean = $state(false);
+
+	let totalWorkDays: { [employee: string]: number } = {};
 
 	const exportTableToExcel = (transactionsTable: string, filename: string) => {
 		const dataType = 'application/vnd.ms-excel';
@@ -59,16 +65,38 @@
 		document.body.removeChild(downloadLink);
 	};
 
+	const generateRandomHolidaysForEmployees = () => {
+		let holidayCount = days - workDays;
+		holidaysPerEmployee = {};
+		employees.forEach((employee) => {
+			let holidays: number[] = [];
+			while (holidays.length < holidayCount) {
+				let randomDay = Math.floor(Math.random() * days) + 1;
+				if (!holidays.includes(randomDay)) {
+					holidays.push(randomDay);
+				}
+			}
+			holidaysPerEmployee[employee] = holidays;
+		});
+	};
+
 	const generateSchedule = () => {
 		if (employeeNumber !== null) {
+			generateRandomHolidaysForEmployees();
 			schedule = {};
+			totalWorkDays = {};
 			const shiftCounts = Array.from({ length: days }, () => new Array(shift).fill(0));
-			const shiftQuota = Math.floor((employeeNumber * days) / (shift * days));
-			let shiftRemainder = (employeeNumber * days) % (shift * days);
+			const shiftQuota = Math.floor((employeeNumber * workDays) / (shift * workDays));
+			let shiftRemainder = (employeeNumber * workDays) % (shift * workDays);
 
 			employees.forEach((employee) => {
 				schedule[employee] = [];
+				totalWorkDays[employee] = 0;
 				for (let day = 0; day < days; day++) {
+					if (holidaysPerEmployee[employee].includes(day + 1)) {
+						schedule[employee].push('L');
+						continue;
+					}
 					let assigned = false;
 					let attempts = 0;
 					while (!assigned && attempts < 100) {
@@ -81,6 +109,7 @@
 						) {
 							schedule[employee].push(shiftName[randomShift]);
 							shiftCounts[day][randomShift]++;
+							totalWorkDays[employee]++;
 							assigned = true;
 							if (shiftCounts[day][randomShift] === shiftQuota + 1) shiftRemainder--;
 						}
@@ -90,6 +119,7 @@
 						const minShift = shiftCounts[day].indexOf(Math.min(...shiftCounts[day]));
 						schedule[employee].push(shiftName[minShift]);
 						shiftCounts[day][minShift]++;
+						totalWorkDays[employee]++;
 					}
 				}
 			});
@@ -154,6 +184,7 @@
 				{#each Array.from({ length: days }, (_, i) => i + 1) as day}
 					<th class="border border-foreground px-2 py-3 text-center">{day}</th>
 				{/each}
+				<th class="border border-foreground px-2 py-3">Total</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -179,12 +210,14 @@
 											>{shiftOption}</option
 										>
 									{/each}
+									<option value="L">L</option>
 								</select>
 							{:else}
 								{shift}
 							{/if}
 						</td>
 					{/each}
+					<td class="border border-foreground px-2 py-3 text-center">{totalWorkDays[employee]}</td>
 				</tr>
 			{/each}
 		</tbody>
