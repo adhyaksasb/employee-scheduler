@@ -424,11 +424,12 @@
 		</div>
 	{:else if stepLevel == 4}
 		<GeneratedTable
-			days={workDays}
+			{workDays}
 			shift={selectedShift.value}
 			shiftName={shifts}
 			employeeNumber={employee}
 			employees={employeeNames}
+			days={daysDifference}
 		/>
 	{/if}
 </div>

@@ -3,12 +3,14 @@
 	import { Pencil, Plus, RefreshCcw } from 'lucide-svelte';
 
 	let {
+		workDays,
 		days,
 		shift,
 		shiftName,
 		employeeNumber,
 		employees
 	}: {
+		workDays: number;
 		days: number;
 		shift: number;
 		shiftName: string[];
@@ -20,8 +22,6 @@
 		[employee: string]: string[];
 	};
 
-	let workDays: number = days - 2;
-
 	let holidaysPerEmployee: { [employee: string]: number[] } = {};
 
 	let schedule: Schedule = $state({});
@@ -32,7 +32,7 @@
 
 	let editTable: boolean = $state(false);
 
-	let totalWorkDays: { [employee: string]: number } = {};
+	let totalWorkDays: { [employee: string]: number } = $state({});
 
 	const exportTableToExcel = (transactionsTable: string, filename: string) => {
 		const dataType = 'application/vnd.ms-excel';
