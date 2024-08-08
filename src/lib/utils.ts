@@ -66,3 +66,8 @@ export function formatCurrency(value: number) {
 export function formatNumber(value: number) {
 	return new Intl.NumberFormat('en-US').format(value);
 }
+
+export function hasDuplicates(array: any[]): boolean {
+	const set = new Set(array);
+	return set.size !== array.length;
+}

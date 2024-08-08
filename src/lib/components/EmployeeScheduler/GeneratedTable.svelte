@@ -154,74 +154,78 @@
 </script>
 
 {#if showTable}
-	<div class="mb-10 mt-6 flex justify-between">
-		<h1 class="text-4xl font-semibold">Jadwal Karyawan</h1>
+	<div class="mb-10 mt-6 flex flex-col justify-between gap-4 md:flex-row">
+		<h1 class="text-lg font-semibold md:text-4xl">Jadwal Karyawan</h1>
 		<div class="flex gap-4">
 			<button
 				onclick={() => exportTableToExcel('employeeSchedule', 'excel_data')}
 				type="button"
-				class="flex gap-2 rounded-sm bg-blue-600 px-5 py-3 text-white"><Plus />Download</button
+				class="flex gap-2 rounded-sm bg-blue-600 px-3 py-3 text-white md:px-5"
+				><Plus class="hidden md:block" />Download</button
 			>
 			<button
 				onclick={handleEditTable}
 				type="button"
-				class="flex gap-2 rounded-sm bg-blue-600 px-5 py-3 text-white"
-				><Pencil /> Atur Manual</button
+				class="flex gap-2 rounded-sm bg-blue-600 px-3 py-3 text-white md:px-5"
+				><Pencil class="hidden md:block" /> Atur Manual</button
 			>
 			<button
 				onclick={updateSchedule}
 				type="button"
-				class="flex gap-2 rounded-sm bg-blue-600 px-5 py-3 text-white"
-				><RefreshCcw /> Atur Ulang</button
+				class="flex gap-2 rounded-sm bg-blue-600 px-3 py-3 text-white md:px-5"
+				><RefreshCcw class="hidden md:block" /> Atur Ulang</button
 			>
 		</div>
 	</div>
-	<table class="w-full border-collapse rounded-sm" id="employeeSchedule">
-		<thead class="bg-foreground text-background">
-			<tr>
-				<th class="border border-foreground px-2 py-3">No</th>
-				<th class="border border-foreground px-2 py-3">Nama Karyawan</th>
-				{#each Array.from({ length: days }, (_, i) => i + 1) as day}
-					<th class="border border-foreground px-2 py-3 text-center">{day}</th>
-				{/each}
-				<th class="border border-foreground px-2 py-3">Total</th>
-			</tr>
-		</thead>
-		<tbody>
-			{#each Object.keys(schedule) as employee, i}
+	<div class="overflow-x-auto">
+		<table class="w-full border-collapse rounded-sm" id="employeeSchedule">
+			<thead class="bg-foreground text-background">
 				<tr>
-					<td class="border border-foreground px-2 py-3">{i + 1}</td>
-					<td class="border border-foreground px-2 py-3">{employee}</td>
-					{#each schedule[employee] as shift, day}
-						<td
-							class={cn(
-								'border border-foreground px-2 py-3 text-center',
-								editTable ? 'cursor-pointer' : 'cursor-not-allowed'
-							)}
-							onclick={() => handleCellClick(employee, day)}
-						>
-							{#if editableShift && editableShift.employee === employee && editableShift.day === day && editTable}
-								<select
-									onchange={(e) =>
-										updateShift(employee, day, (e.target as HTMLSelectElement).value)}
-								>
-									{#each shiftName as shiftOption}
-										<option value={shiftOption} selected={shift === shiftOption}
-											>{shiftOption}</option
-										>
-									{/each}
-									<option value="L">L</option>
-								</select>
-							{:else}
-								{shift}
-							{/if}
-						</td>
+					<th class="border border-foreground px-2 py-3">No</th>
+					<th class="border border-foreground px-2 py-3">Nama Karyawan</th>
+					{#each Array.from({ length: days }, (_, i) => i + 1) as day}
+						<th class="border border-foreground px-2 py-3 text-center">{day}</th>
 					{/each}
-					<td class="border border-foreground px-2 py-3 text-center">{totalWorkDays[employee]}</td>
+					<th class="border border-foreground px-2 py-3">Total</th>
 				</tr>
-			{/each}
-		</tbody>
-	</table>
+			</thead>
+			<tbody>
+				{#each Object.keys(schedule) as employee, i}
+					<tr>
+						<td class="border border-foreground px-2 py-3">{i + 1}</td>
+						<td class="border border-foreground px-2 py-3">{employee}</td>
+						{#each schedule[employee] as shift, day}
+							<td
+								class={cn(
+									'border border-foreground px-2 py-3 text-center',
+									editTable ? 'cursor-pointer' : 'cursor-not-allowed'
+								)}
+								onclick={() => handleCellClick(employee, day)}
+							>
+								{#if editableShift && editableShift.employee === employee && editableShift.day === day && editTable}
+									<select
+										onchange={(e) =>
+											updateShift(employee, day, (e.target as HTMLSelectElement).value)}
+									>
+										{#each shiftName as shiftOption}
+											<option value={shiftOption} selected={shift === shiftOption}
+												>{shiftOption}</option
+											>
+										{/each}
+										<option value="L">L</option>
+									</select>
+								{:else}
+									{shift}
+								{/if}
+							</td>
+						{/each}
+						<td class="border border-foreground px-2 py-3 text-center">{totalWorkDays[employee]}</td
+						>
+					</tr>
+				{/each}
+			</tbody>
+		</table>
+	</div>
 {:else}
 	<div class="mt-12 flex w-full items-center justify-center">
 		<button

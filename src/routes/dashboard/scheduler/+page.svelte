@@ -3,7 +3,7 @@
 	import type { DateRange } from 'bits-ui';
 	import Button from '$lib/components/ui/button/button.svelte';
 	import * as Select from '$lib/components/ui/select';
-	import { cn } from '$lib/utils';
+	import { cn, hasDuplicates } from '$lib/utils';
 	import { CalendarIcon } from 'lucide-svelte';
 	import {
 		CalendarDate,
@@ -18,6 +18,9 @@
 
 	let employeeCard = '/assets/images/EmployeeCard.png';
 	let showAlert: boolean = $state(false);
+	let firstPageAlert: boolean = $state(false);
+	let secondPageAlert: boolean = $state(false);
+	let thirdPageAlert: boolean = $state(false);
 
 	let stepLevel: number = $state(1);
 
@@ -40,21 +43,27 @@
 	const checkStepOne = () => {
 		if (stepLevel == 1) {
 			if (employee == null || employee < 3 || employee > 20) {
+				firstPageAlert = true;
 				showAlert = true;
 				setTimeout(() => {
 					showAlert = false;
+					firstPageAlert = false;
 				}, 2000);
 				return false;
 			} else if (selectedShift.value == 0) {
+				firstPageAlert = true;
 				showAlert = true;
 				setTimeout(() => {
 					showAlert = false;
+					firstPageAlert = false;
 				}, 2000);
 				return false;
 			} else if (daysDifference < 20 || daysDifference > 31) {
+				firstPageAlert = true;
 				showAlert = true;
 				setTimeout(() => {
 					showAlert = false;
+					firstPageAlert = false;
 				}, 2000);
 				return false;
 			}
@@ -75,9 +84,11 @@
 			nextStep();
 		} else if (stepLevel == 2) {
 			if (workDays == 0) {
+				secondPageAlert = true;
 				showAlert = true;
 				setTimeout(() => {
 					showAlert = false;
+					secondPageAlert = false;
 				}, 2000);
 				return false;
 			}
@@ -86,21 +97,15 @@
 			}
 			nextStep();
 		} else if (stepLevel == 3) {
-			if (hasEmptyValue()) {
+			if (hasEmptyValue() || hasDuplicates(employeeNames)) {
+				thirdPageAlert = true;
 				showAlert = true;
 				setTimeout(() => {
 					showAlert = false;
+					thirdPageAlert = false;
 				}, 2000);
 				return false;
 			}
-			// if (employee != null) {
-			// 	localStorage.setItem('employeeNumber', employee.toString());
-			// 	localStorage.setItem('shift', selectedShift.value.toString());
-			// 	localStorage.setItem('days', workDays.toString());
-			// 	localStorage.setItem('employees', JSON.stringify(employeeNames));
-			// 	localStorage.setItem('shiftName', JSON.stringify(shifts));
-			// }
-			console.log(employeeNames);
 			nextStep();
 		}
 	};
@@ -237,12 +242,24 @@
 				</svg>
 				<span class="sr-only">Danger</span>
 				<div>
-					<span class="font-medium">Pastikan persyaratan ini terpenuhi:</span>
-					<ul class="mt-1.5 list-inside list-disc">
-						<li>Minimal masukkan 3 karyawan</li>
-						<li>Minimal masukkan 2 shift</li>
-						<li>Periode minimal 20 hari dan maksimal 31 hari</li>
-					</ul>
+					{#if firstPageAlert}
+						<span class="font-medium">Pastikan persyaratan ini terpenuhi:</span>
+						<ul class="mt-1.5 list-inside list-disc">
+							<li>Minimal masukkan 3 karyawan</li>
+							<li>Minimal masukkan 2 shift</li>
+							<li>Periode minimal 20 hari dan maksimal 31 hari</li>
+						</ul>
+					{:else if secondPageAlert}
+						<span class="font-medium">Pilih hari kerja</span>
+					{:else if thirdPageAlert}
+						<span class="font-medium">Pastikan persyaratan ini terpenuhi:</span>
+						<ul class="mt-1.5 list-inside list-disc">
+							<li>Masukkan seluruh karyawan pada setiap input</li>
+							<li>
+								Tidak ada nama karyawan yang sama (Gunakan nomor, jika terdapat nama yang sama)
+							</li>
+						</ul>
+					{/if}
 				</div>
 			</div>
 		</div>
