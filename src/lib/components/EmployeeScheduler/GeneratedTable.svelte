@@ -22,8 +22,6 @@
 		[employee: string]: string[];
 	};
 
-	let holidaysPerEmployee: { [employee: string]: number[] } = {};
-
 	let schedule: Schedule = $state({});
 
 	let showTable: boolean = $state(false);
@@ -65,61 +63,96 @@
 		document.body.removeChild(downloadLink);
 	};
 
-	const generateRandomHolidaysForEmployees = () => {
-		let holidayCount = days - workDays;
-		holidaysPerEmployee = {};
-		employees.forEach((employee) => {
-			let holidays: number[] = [];
-			while (holidays.length < holidayCount) {
-				let randomDay = Math.floor(Math.random() * days) + 1;
-				if (!holidays.includes(randomDay)) {
-					holidays.push(randomDay);
-				}
-			}
-			holidaysPerEmployee[employee] = holidays;
-		});
+	const generateRandomHolidaysForEmployee = (workDays: number, totalDays: number) => {
+		return totalDays - workDays;
 	};
 
 	const generateSchedule = () => {
 		if (employeeNumber !== null) {
-			generateRandomHolidaysForEmployees();
 			schedule = {};
 			totalWorkDays = {};
-			const shiftCounts = Array.from({ length: days }, () => new Array(shift).fill(0));
-			const shiftQuota = Math.floor((employeeNumber * workDays) / (shift * workDays));
-			let shiftRemainder = (employeeNumber * workDays) % (shift * workDays);
 
 			employees.forEach((employee) => {
+				let holidayCount = generateRandomHolidaysForEmployee(workDays, days);
 				schedule[employee] = [];
 				totalWorkDays[employee] = 0;
+
+				let lastShift = '';
+				let remainingWorkDays = workDays;
+
 				for (let day = 0; day < days; day++) {
-					if (holidaysPerEmployee[employee].includes(day + 1)) {
-						schedule[employee].push('L');
-						continue;
-					}
-					let assigned = false;
-					let attempts = 0;
-					while (!assigned && attempts < 100) {
-						// Add a fail-safe mechanism
-						attempts++;
-						const randomShift = Math.floor(Math.random() * shift);
-						if (
-							shiftCounts[day][randomShift] < shiftQuota ||
-							(shiftRemainder > 0 && shiftCounts[day][randomShift] < shiftQuota + 1)
-						) {
-							schedule[employee].push(shiftName[randomShift]);
-							shiftCounts[day][randomShift]++;
-							totalWorkDays[employee]++;
-							assigned = true;
-							if (shiftCounts[day][randomShift] === shiftQuota + 1) shiftRemainder--;
+					let nextShift = '';
+
+					if (shift == 3) {
+						if (holidayCount > 0) {
+							if (lastShift === '') {
+								const randomNum = Math.floor(Math.random() * 4);
+								nextShift =
+									randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : randomNum === 2 ? 'M' : 'L';
+								if (nextShift === 'L') {
+									holidayCount--;
+								}
+							} else if (lastShift === 'M') {
+								// Night can either stay as Night or go to Holiday
+								nextShift = Math.random() < 0.1 ? 'M' : 'L';
+								if (nextShift === 'L') {
+									holidayCount--;
+								}
+							} else if (lastShift === 'L') {
+								const randomNum = Math.floor(Math.random() * 3);
+								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : 'L';
+								if (nextShift === 'L') {
+									holidayCount--;
+								}
+							} else if (lastShift === 'P' || lastShift === 'S') {
+								const randomNum = Math.floor(Math.random() * 3);
+								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : 'M';
+							}
+						} else {
+							if (lastShift === 'M') {
+								nextShift = 'M'; // No holidays left, must remain Night
+							} else {
+								const randomNum = Math.floor(Math.random() * 3);
+								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : 'M';
+							}
+						}
+					} else if (shift == 2) {
+						if (holidayCount > 0) {
+							if (lastShift === '') {
+								const randomNum = Math.floor(Math.random() * 3);
+								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'M' : 'L';
+								if (nextShift === 'L') {
+									holidayCount--;
+								}
+							} else if (lastShift === 'M') {
+								// Night can either stay as Night or go to Holiday
+								nextShift = Math.random() < 0.1 ? 'M' : 'L';
+								if (nextShift === 'L') {
+									holidayCount--;
+								}
+							} else if (lastShift === 'L') {
+								nextShift = Math.random() < 0.5 ? 'P' : 'L';
+								if (nextShift === 'L') {
+									holidayCount--;
+								}
+							} else if (lastShift === 'P') {
+								nextShift = Math.random() < 0.5 ? 'P' : 'M';
+							}
+						} else {
+							if (lastShift === 'M') {
+								nextShift = 'M'; // No holidays left, must remain Night
+							} else {
+								nextShift = Math.random() < 0.5 ? 'P' : 'M';
+							}
 						}
 					}
-					if (!assigned) {
-						// In case all attempts fail, fallback to any shift with minimum assignments
-						const minShift = shiftCounts[day].indexOf(Math.min(...shiftCounts[day]));
-						schedule[employee].push(shiftName[minShift]);
-						shiftCounts[day][minShift]++;
+
+					schedule[employee].push(nextShift);
+					lastShift = nextShift;
+
+					if (nextShift !== 'L') {
 						totalWorkDays[employee]++;
+						remainingWorkDays--;
 					}
 				}
 			});
