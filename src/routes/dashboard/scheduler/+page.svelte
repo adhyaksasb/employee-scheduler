@@ -29,6 +29,8 @@
 	let shifts: string[] = $state([]);
 	let selectionDays: number[] = $state([]);
 
+	let dayNames: { Day: number; Name: string }[] = $state([]);
+
 	// ====================================================================================== Step 1 (Set Variables) ============================================================================================
 	// ==========================================================================================================================================================================================================
 	let employee: number | null = $state(null);
@@ -42,6 +44,16 @@
 
 	const checkStepOne = () => {
 		if (stepLevel == 1) {
+			dayNames = [];
+			calculateDateDifference(
+				value?.start?.day,
+				value?.start?.month,
+				value?.start?.year,
+				value?.end?.day,
+				value?.end?.month,
+				value?.end?.year
+			);
+			console.log(dayNames);
 			if (employee == null || employee < 3 || employee > 20) {
 				firstPageAlert = true;
 				showAlert = true;
@@ -193,6 +205,24 @@
 		// Convert milliseconds to days
 		const msPerDay = 24 * 60 * 60 * 1000; // Number of milliseconds in a day
 		daysDifference = Math.floor(differenceInMs / msPerDay);
+
+		// Generate array of days with names
+		let currentDate = new Date(startDate);
+
+		for (let i = 0; i <= daysDifference; i++) {
+			const day = currentDate.getDate();
+			const month = currentDate.getMonth();
+			const year = currentDate.getFullYear();
+
+			// Get the name of the day
+			const dayName = currentDate.toLocaleDateString('id-ID', { weekday: 'short' });
+
+			// Add to the array
+			dayNames.push({ Day: day, Name: dayName });
+
+			// Move to the next day
+			currentDate = new Date(year, month, day + 1);
+		}
 	};
 	// ====================================================================================== Step 3 (Input Employee Name) ======================================================================================
 	// ==========================================================================================================================================================================================================
@@ -210,15 +240,6 @@
 
 	$effect(() => {
 		document.title = 'Employee Scheduler';
-
-		calculateDateDifference(
-			value?.start?.day,
-			value?.start?.month,
-			value?.start?.year,
-			value?.end?.day,
-			value?.end?.month,
-			value?.end?.year
-		);
 	});
 </script>
 
@@ -447,6 +468,7 @@
 			employeeNumber={employee}
 			employees={employeeNames}
 			days={daysDifference}
+			{dayNames}
 		/>
 	{/if}
 </div>

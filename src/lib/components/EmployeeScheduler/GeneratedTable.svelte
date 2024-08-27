@@ -8,7 +8,8 @@
 		shift,
 		shiftName,
 		employeeNumber,
-		employees
+		employees,
+		dayNames
 	}: {
 		workDays: number;
 		days: number;
@@ -16,11 +17,19 @@
 		shiftName: string[];
 		employeeNumber: number | null;
 		employees: string[];
+		dayNames: { Day: number; Name: string }[];
 	} = $props();
 
 	type Schedule = {
 		[employee: string]: string[];
 	};
+
+	let minMorning = 4;
+	let minAfternoon = 4;
+	let minNight = 4;
+	let maxMorning = 5;
+	let maxAfternoon = 5;
+	let maxNight = 5;
 
 	let schedule: Schedule = $state({});
 
@@ -31,6 +40,8 @@
 	let editTable: boolean = $state(false);
 
 	let totalWorkDays: { [employee: string]: number } = $state({});
+
+	let shiftCountPerDay: any = $state([]);
 
 	const exportTableToExcel = (transactionsTable: string, filename: string) => {
 		const dataType = 'application/vnd.ms-excel';
@@ -69,6 +80,7 @@
 
 	const generateSchedule = () => {
 		if (employeeNumber !== null) {
+			shiftCountPerDay = [];
 			schedule = {};
 			totalWorkDays = {};
 
@@ -79,74 +91,181 @@
 
 				let lastShift = '';
 				let remainingWorkDays = workDays;
+				let daysSinceLastHoliday = 0;
+				let consecutiveP = 0;
+				let consecutiveS = 0;
 
-				for (let day = 0; day < days; day++) {
+				for (let day = 0; day < days + 1; day++) {
+					if (!shiftCountPerDay[day]) {
+						shiftCountPerDay[day] = { P: 0, S: 0, M: 0, L: 0 };
+					}
+
 					let nextShift = '';
 
-					if (shift == 3) {
+					if (shift === 3) {
 						if (holidayCount > 0) {
+							const holidayChance = daysSinceLastHoliday >= 6 ? 0.9 : 0.1;
+							const shouldAssignHoliday = Math.random() < holidayChance;
+
 							if (lastShift === '') {
 								const randomNum = Math.floor(Math.random() * 4);
 								nextShift =
 									randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : randomNum === 2 ? 'M' : 'L';
 								if (nextShift === 'L') {
 									holidayCount--;
+									daysSinceLastHoliday = 0;
+									consecutiveP = 0;
+									consecutiveS = 0;
+								} else {
+									daysSinceLastHoliday = 6;
 								}
+							} else if (lastShift === 'M' && shouldAssignHoliday && daysSinceLastHoliday >= 6) {
+								nextShift = 'L';
+								holidayCount--;
+								daysSinceLastHoliday = 0;
+								consecutiveP = 0;
+								consecutiveS = 0;
 							} else if (lastShift === 'M') {
-								// Night can either stay as Night or go to Holiday
-								nextShift = Math.random() < 0.1 ? 'M' : 'L';
+								nextShift = Math.random() < 0.1 && daysSinceLastHoliday >= 6 ? 'L' : 'M';
 								if (nextShift === 'L') {
 									holidayCount--;
+									daysSinceLastHoliday = 0;
+									consecutiveP = 0;
+									consecutiveS = 0;
+								} else {
+									daysSinceLastHoliday++;
 								}
 							} else if (lastShift === 'L') {
-								const randomNum = Math.floor(Math.random() * 3);
-								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : 'L';
-								if (nextShift === 'L') {
-									holidayCount--;
-								}
+								const randomNum = Math.floor(Math.random() * 2);
+								nextShift = randomNum === 0 ? 'P' : 'S';
+								daysSinceLastHoliday++;
+								consecutiveP = nextShift === 'P' ? 1 : 0;
+								consecutiveS = nextShift === 'S' ? 1 : 0;
 							} else if (lastShift === 'P' || lastShift === 'S') {
-								const randomNum = Math.floor(Math.random() * 3);
-								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : 'M';
+								if (
+									(lastShift === 'P' && consecutiveP === 3) ||
+									(lastShift === 'S' && consecutiveS === 3)
+								) {
+									nextShift = lastShift === 'P' ? 'S' : 'P';
+									consecutiveP = nextShift === 'P' ? 1 : 0;
+									consecutiveS = nextShift === 'S' ? 1 : 0;
+								} else {
+									const randomNum = Math.floor(Math.random() * 4);
+									if (daysSinceLastHoliday >= 5) {
+										nextShift = 'M';
+									} else {
+										nextShift =
+											randomNum === 0
+												? 'P'
+												: randomNum === 1
+													? 'S'
+													: daysSinceLastHoliday >= 4
+														? 'M'
+														: Math.random() < 0.5
+															? 'P'
+															: 'S';
+									}
+									if (nextShift === 'P') {
+										consecutiveP++;
+										consecutiveS = 0;
+									} else if (nextShift === 'S') {
+										consecutiveS++;
+										consecutiveP = 0;
+									} else {
+										consecutiveP = 0;
+										consecutiveS = 0;
+									}
+									daysSinceLastHoliday++;
+								}
 							}
 						} else {
 							if (lastShift === 'M') {
-								nextShift = 'M'; // No holidays left, must remain Night
+								nextShift = 'M';
 							} else {
 								const randomNum = Math.floor(Math.random() * 3);
-								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'S' : 'M';
+								nextShift =
+									randomNum === 0
+										? 'P'
+										: randomNum === 1
+											? 'S'
+											: daysSinceLastHoliday >= 4
+												? 'M'
+												: Math.random() < 0.5
+													? 'P'
+													: 'S';
 							}
+							daysSinceLastHoliday++;
 						}
-					} else if (shift == 2) {
+					} else if (shift === 2) {
 						if (holidayCount > 0) {
-							if (lastShift === '') {
+							const holidayChance = daysSinceLastHoliday >= 7 ? 0.5 : 0.1;
+							const shouldAssignHoliday = Math.random() < holidayChance;
+
+							if (shouldAssignHoliday && daysSinceLastHoliday >= 7) {
+								nextShift = 'L';
+								holidayCount--;
+								daysSinceLastHoliday = 0;
+								consecutiveP = 0;
+								consecutiveS = 0;
+							} else if (lastShift === '') {
 								const randomNum = Math.floor(Math.random() * 3);
 								nextShift = randomNum === 0 ? 'P' : randomNum === 1 ? 'M' : 'L';
 								if (nextShift === 'L') {
 									holidayCount--;
+									daysSinceLastHoliday = 0;
+									consecutiveP = 0;
+									consecutiveS = 0;
+								} else {
+									daysSinceLastHoliday++;
 								}
 							} else if (lastShift === 'M') {
-								// Night can either stay as Night or go to Holiday
-								nextShift = Math.random() < 0.1 ? 'M' : 'L';
+								nextShift = Math.random() < 0.1 && daysSinceLastHoliday >= 7 ? 'L' : 'M';
 								if (nextShift === 'L') {
 									holidayCount--;
+									daysSinceLastHoliday = 0;
+									consecutiveP = 0;
+									consecutiveS = 0;
+								} else {
+									daysSinceLastHoliday++;
 								}
 							} else if (lastShift === 'L') {
-								nextShift = Math.random() < 0.5 ? 'P' : 'L';
-								if (nextShift === 'L') {
-									holidayCount--;
-								}
+								nextShift = Math.random() < 0.5 ? 'P' : 'S';
+								daysSinceLastHoliday++;
+								consecutiveP = nextShift === 'P' ? 1 : 0;
+								consecutiveS = nextShift === 'S' ? 1 : 0;
 							} else if (lastShift === 'P') {
-								nextShift = Math.random() < 0.5 ? 'P' : 'M';
+								if (consecutiveP === 3) {
+									nextShift = 'M';
+									consecutiveP = 0;
+								} else {
+									nextShift = daysSinceLastHoliday >= 4 ? 'M' : Math.random() < 0.5 ? 'P' : 'S';
+									if (nextShift === 'P') {
+										consecutiveP++;
+										consecutiveS = 0;
+									} else if (nextShift === 'S') {
+										consecutiveS++;
+										consecutiveP = 0;
+									} else {
+										consecutiveP = 0;
+										consecutiveS = 0;
+									}
+								}
+								daysSinceLastHoliday++;
 							}
 						} else {
 							if (lastShift === 'M') {
-								nextShift = 'M'; // No holidays left, must remain Night
+								nextShift = 'M';
 							} else {
-								nextShift = Math.random() < 0.5 ? 'P' : 'M';
+								nextShift = daysSinceLastHoliday >= 4 ? 'M' : Math.random() < 0.5 ? 'P' : 'S';
 							}
+							daysSinceLastHoliday++;
 						}
 					}
 
+					// Track the shift counts for the day
+					shiftCountPerDay[day][nextShift]++;
+
+					// Update the employee's schedule
 					schedule[employee].push(nextShift);
 					lastShift = nextShift;
 
@@ -156,7 +275,15 @@
 					}
 				}
 			});
+
+			// Display the shift counts per day below the table
+			displayShiftCounts(shiftCountPerDay);
 		}
+	};
+
+	const displayShiftCounts = (shiftCountPerDay: any) => {
+		// Implement your logic to display shiftCountPerDay below the generated shift table
+		console.log(shiftCountPerDay);
 	};
 
 	const updateSchedule = () => {
@@ -174,8 +301,17 @@
 	};
 
 	const updateShift = (employee: string, day: number, newShift: string) => {
+		if (schedule[employee][day] == 'L' && newShift == 'L') {
+			return;
+		} else if (schedule[employee][day] == 'L' && newShift != 'L') {
+			totalWorkDays[employee]++;
+		} else if (schedule[employee][day] != 'L' && newShift == 'L') {
+			totalWorkDays[employee]--;
+		}
+		shiftCountPerDay[day][schedule[employee][day]]--;
 		schedule[employee][day] = newShift;
 		editableShift = null;
+		shiftCountPerDay[day][newShift]++;
 	};
 
 	const handleEditTable = () => {
@@ -214,12 +350,17 @@
 		<table class="w-full border-collapse rounded-sm" id="employeeSchedule">
 			<thead class="bg-foreground text-background">
 				<tr>
-					<th class="border border-foreground px-2 py-3">No</th>
-					<th class="border border-foreground px-2 py-3">Nama Karyawan</th>
-					{#each Array.from({ length: days }, (_, i) => i + 1) as day}
-						<th class="border border-foreground px-2 py-3 text-center">{day}</th>
+					<th rowspan="2" class="border border-background px-2 py-3">No</th>
+					<th rowspan="2" class="border border-background px-2 py-3">Nama Karyawan</th>
+					{#each dayNames as day}
+						<th class="border border-background px-2 py-3 text-center">{day.Name}</th>
 					{/each}
-					<th class="border border-foreground px-2 py-3">Total</th>
+					<th rowspan="2" class="border border-background px-2 py-3">Total</th>
+				</tr>
+				<tr>
+					{#each dayNames as day}
+						<th class="border border-background px-2 py-3 text-center">{day.Day}</th>
+					{/each}
 				</tr>
 			</thead>
 			<tbody>
@@ -257,6 +398,40 @@
 					</tr>
 				{/each}
 			</tbody>
+			<tfoot class="border-4 border-foreground">
+				<tr>
+					<td class="border border-foreground px-2 py-3" colspan="2">Total Shift Pagi (P)</td>
+					{#each dayNames as _, index}
+						<td class="border border-foreground px-2 py-3 text-center"
+							>{shiftCountPerDay[index]?.P || 0}</td
+						>
+					{/each}
+				</tr>
+				<tr>
+					<td class="border border-foreground px-2 py-3" colspan="2">Total Shift Siang (S)</td>
+					{#each dayNames as _, index}
+						<td class="border border-foreground px-2 py-3 text-center"
+							>{shiftCountPerDay[index]?.S || 0}</td
+						>
+					{/each}
+				</tr>
+				<tr>
+					<td class="border border-foreground px-2 py-3" colspan="2">Total Shift Malam (M)</td>
+					{#each dayNames as _, index}
+						<td class="border border-foreground px-2 py-3 text-center"
+							>{shiftCountPerDay[index]?.M || 0}</td
+						>
+					{/each}
+				</tr>
+				<tr>
+					<td class="border border-foreground px-2 py-3" colspan="2">Total Shift Libur (L)</td>
+					{#each dayNames as _, index}
+						<td class="border border-foreground px-2 py-3 text-center"
+							>{shiftCountPerDay[index]?.L || 0}</td
+						>
+					{/each}
+				</tr>
+			</tfoot>
 		</table>
 	</div>
 {:else}
